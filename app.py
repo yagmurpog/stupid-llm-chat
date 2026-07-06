@@ -1,46 +1,51 @@
 from openrouter import OpenRouter
 import os
+import json
+from pathlib import Path
+from dumbasslib import *
+from sys import platform
 
 
 config = {
-    "key": os.getenv(""),
+    "key": "",
     "model": "",
     "system_prompt": "You are an AI chatbot, speak in a calm tone like someone if they're messaging on an online platform, keep your answers short like a human. Don't use emojis and speak like a terminally online personality would.",
 }
+
+
+# have this ready as a fallback
+configFile = "./config.json"
+
+match platform:
+    case "linux" | "darwin":
+        configFile = str(Path.home()) + "/.config/dumbassllmchattingprogramconfig.json"
+        pass
+    case "win32":
+        configFile = (
+            str(Path.home())
+            + "\\AppData\\Roaming\\dumbassllmchattingprogramconfig.json"
+        )
+
+
+if Path(configFile).exists():
+    config = readConfig(configFile)
+else:
+    updateConfig(configFile, config)
+
 
 client = OpenRouter(
     api_key=config["key"],
     server_url="https://ai.hackclub.com/proxy/v1",
 )
 
-previous_messages = [
+messages = [
     {
         "role": "system",
         "content": config["system_prompt"],
     }
 ]
 
-modelSelection = False
-selectedModel = ""
-availableModels = []
-
-
-def getModels(client):
-    return client.models.list().data
-
-
 availableModels = getModels(client)
-
-
-def sortModelsByPrice(models):
-    return sorted(availableModels, key=lambda x: float(x.pricing.completion))
-
-
-def getModelIds(models):
-    ids = []
-    for model in models:
-        ids.append(model.id)
-    return ids
 
 
 while True:
@@ -51,11 +56,9 @@ while True:
         search = False
         inpSplit = inp.split()
         match inpSplit[0]:
-
             case "help":
                 print("list, select, chat")
             case "list":
-
                 if len(inpSplit) > 1:
                     search = True
                 for model in sortModelsByPrice(availableModels):
@@ -74,36 +77,26 @@ while True:
                         )
             case "select":
                 if len(inpSplit) > 1:
-                    if inpSplit[1] in getModelIds(availableModels):
-                        config["model"] = inpSplit[1]
-                        print("model selected: " + inpSplit[1])
-                    else:
-                        print("model not found !")
+                    select(inpSplit[1], availableModels, config)
+                else:
+                    print("pass along a paramater please")
+
+            case "api":
+                if len(inpSplit) > 1:
+                    config["key"] = inpSplit[1]
+                    updateConfig(configFile, config)
                 else:
                     print("pass along a paramater please")
 
             case "chat":
-                if config["model"]:
+                if config["key"] == "":
+                    print("please set an api key first with the api command")
+
+                if config["model"] and config["key"] != "":
                     inputText = "<You> "
                     print("type /exit to exit chat mode")
                     while True:
                         inp2 = format(input(inputText))
                         if inp2 == "/exit":
                             break
-                        user_message = {"role": "user", "content": inp2}
-                        previous_messages.append(user_message)
-
-                        modeltouse = str(config["model"])
-                        try:
-                            response_template = client.chat.send(
-                                model=config["model"], messages=previous_messages
-                            )
-                            previous_messages.append(
-                                response_template.choices[0].message
-                            )
-                            print(
-                                "<Chatbot> "
-                                + response_template.choices[0].message.content
-                            )
-                        except BaseException as exc:
-                            print(exc)
+                        print("<Chatbot>" + send(inp2, messages, client, config))
