@@ -6,11 +6,15 @@ from dumbasslib import *
 from sys import platform
 
 
+# default config 
 config = {
     "key": "",
     "model": "",
     "system_prompt": "You are an AI chatbot, speak in a calm tone like someone if they're messaging on an online platform, keep your answers short like a human. Don't use emojis and speak like a terminally online personality would.",
+    "chats_folder": getChatsFolder(),
 }
+
+
 
 
 # have this ready as a fallback
@@ -19,7 +23,6 @@ configFile = "./config.json"
 match platform:
     case "linux" | "darwin":
         configFile = str(Path.home()) + "/.config/dumbassllmchattingprogramconfig.json"
-        pass
     case "win32":
         configFile = (
             str(Path.home())
@@ -29,6 +32,12 @@ match platform:
 
 if Path(configFile).exists():
     config = readConfig(configFile)
+
+    print(config["model"])
+
+    if not Path(config["chats_folder"]).exists():
+        os.makedirs(config["chats_folder"])
+    
 else:
     updateConfig(configFile, config)
 
@@ -77,7 +86,7 @@ while True:
                         )
             case "select":
                 if len(inpSplit) > 1:
-                    select(inpSplit[1], availableModels, config)
+                    select(inpSplit[1], availableModels, config,configFile)
                 else:
                     print("pass along a paramater please")
 
@@ -89,14 +98,28 @@ while True:
                     print("pass along a paramater please")
 
             case "chat":
+                 
                 if config["key"] == "":
                     print("please set an api key first with the api command")
 
-                if config["model"] and config["key"] != "":
+                if config["model"] == "":
+                    print("please select an model first")
+
+                if config["model"] != "" and config["key"] != "":
+                    if len(inpSplit) > 1:
+                      pass
+                    else:
+                        print("new chat created: ")
+                  
+
                     inputText = "<You> "
                     print("type /exit to exit chat mode")
                     while True:
                         inp2 = format(input(inputText))
                         if inp2 == "/exit":
+                            saveChat(messages,"crappy_chat")
                             break
-                        print("<Chatbot>" + send(inp2, messages, client, config))
+                        print("<Chatbot> " + send(inp2, messages, client, config))
+
+            case "list-chats":
+                print(os.listdir(config["chats_folder"]))

@@ -1,4 +1,6 @@
 from openrouter import OpenRouter
+from sys import platform
+from pathlib import Path
 import json
 
 def getModels(client):
@@ -21,15 +23,15 @@ def updateConfig(configFile,config):
         f.close()
 
 def readConfig(configFile):
-    with open("./config.json", "r", encoding="utf-8") as f:
+    with open(configFile, "r", encoding="utf-8") as f:
         return json.loads(f.read())
         f.close()
 
-def select(modelid,availableModels,config):
+def select(modelid,availableModels,config,configFile):
     if modelid in getModelIds(availableModels):
         config["model"] = modelid
         print("model selected: " + modelid)
-        updateConfig("./config.json",config)
+        updateConfig(configFile,config)
     else:
      print("model not found !")
               
@@ -44,3 +46,26 @@ def send(text, chat, client, config):
     except BaseException as exc:
         return exc
 
+def getChatsFolder():
+    match platform:
+        case "linux":
+            return str(Path.home()) + "/.local/share/dumbassllmchattingprogram/chats/"
+
+        case "win32":
+            return (
+                str(Path.home())
+                + "\\AppData\\Roaming\\dumbassllmchattingprogram\\chats\\"
+            )
+
+def loadChat(chatName):
+    chatFile = getChatsFolder() + chatName + ".json"
+    if Path(getChatsFolder + chatName + ".json").exists():
+        with open(chatFile, "r", encoding="utf-8") as f:
+            return json.loads(f.read())
+
+def saveChat(chat,chatName):
+    chatFile = getChatsFolder() + chatName + ".json"
+    with open(chatFile, "w", encoding="utf-8") as f:
+        for entry in chat:
+            f.write(json.dumps(entry) + "\n")
+        f.close()
