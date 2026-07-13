@@ -1,10 +1,9 @@
-from openrouter import OpenRouter
 import os
 import json
 from pathlib import Path
 from dumbasslib import *
 from sys import platform
-
+from myowndumbasswrapperforopenrouternbecauseitdoesntworkonwindowsforsomereason import *
 
 # default config
 config = {
@@ -12,6 +11,7 @@ config = {
     "model": "",
     "system_prompt": "You are an AI chatbot, speak in a calm tone like someone if they're messaging on an online platform, keep your answers short like a human. Don't use emojis and speak like a terminally online personality would.",
     "chats_folder": getChatsFolder(),
+    "endpoint":"https://ai.hackclub.com/proxy/v1/"
 }
 
 
@@ -45,7 +45,7 @@ messages = [
     }
 ]
 
-availableModels = getModels(client)
+availableModels = getModels(config["endpoint"])
 
 try:
     while True:
@@ -63,17 +63,19 @@ try:
                         search = True
                     for model in sortModelsByPrice(availableModels):
                         if search:
-                            if inpSplit[1] in model.id:
+                            if inpSplit[1] in model["id"]:
                                 print(
-                                    model.id
+                                    model["id"]
                                     + "  O $"
-                                    + str(float(model.pricing.completion) * 1000000)
+                                    + str(
+                                        float(model["pricing"]["completion"]) * 1000000
+                                    )
                                 )
                         else:
                             print(
-                                model.id
+                                model["id"]
                                 + "  O $"
-                                + str(float(model.pricing.completion) * 1000000)
+                                + str(float(model["pricing"]["completion"]) * 1000000)
                             )
                 case "select":
                     if len(inpSplit) > 1:
@@ -103,20 +105,24 @@ try:
                             chatName = inpSplit[1]
                             messages = loadChat(inpSplit[1])
                             print("loaded chat: " + inpSplit[1])
-                        else:   
+                        else:
                             print("new chat created: " + chatName)
 
                         inputText = "<You> "
                         print("type /exit to exit chat mode")
                         try:
+                            headers2 = {
+                                "Authorization": "Bearer "
+                                + config["key"],
+                                "Content-Type": "application/json",
+                            }
+                            
                             while True:
                                 inp2 = format(input(inputText))
                                 if inp2 == "/exit":
                                     saveChat(messages, chatName)
                                     break
-                                print(
-                                    "<Chatbot> " + send(inp2, messages, client, config)
-                                )
+                                print("<Chatbot> " + send(inp2, messages,config["endpoint"], headers2))
                         except KeyboardInterrupt:
                             print("ok exiting")
                             saveChat(messages, chatName)

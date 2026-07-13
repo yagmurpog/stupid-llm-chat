@@ -2,17 +2,18 @@ from openrouter import OpenRouter
 from sys import platform
 from pathlib import Path
 import json
+from myowndumbasswrapperforopenrouternbecauseitdoesntworkonwindowsforsomereason import *
 
 
-def getModels(client):
+def getModelsOLD(client):
     return client.models.list().data
 
 
-def sortModelsByPrice(models):
+def sortModelsByPriceOLD(models):
     return sorted(models, key=lambda x: float(x.pricing.completion))
 
 
-def getModelIds(models):
+def getModelIdsOLD(models):
     ids = []
     for model in models:
         ids.append(model.id)
@@ -40,7 +41,7 @@ def select(modelid, availableModels, config, configFile):
         print("model not found !")
 
 
-def send(text, chat, client, config):
+def sendOLD(text, chat, client, config):
     user_message = {"role": "user", "content": text}
     chat.append(user_message)
     try:
@@ -71,7 +72,7 @@ def getConfigFile():
         case "win32":
             return (
                 str(Path.home())
-                + "\\AppData\\Roaming\\dumbassllmchattingprogramconfig.json"
+                + "\\AppData\\Roaming\\dumbassllmchattingprogram\\dumbassllmchattingprogramconfig.json"
             )
 
 
@@ -85,22 +86,7 @@ def loadChat(chatName):
 def saveChat(chat, chatName):
     chatFile = getChatsFolder() + chatName + ".json"
     with open(chatFile, "w", encoding="utf-8") as f:
-        f.write("[")
-        for i,entry in enumerate(chat):
-            if isinstance(entry, dict):
-                f.write(json.dumps(entry) + ",\n")
-            else:
-                f.write(
-                    json.dumps(
-                        {
-                            "role": "assistant",
-                            "content": entry.content,
-                        }
-                    ) 
-                )
-                if i != len(chat) -1 :
-                    f.write(",")
-        f.write("]")
+        f.write(json.dumps(chat))
         f.close()
 
 
