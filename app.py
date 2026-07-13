@@ -122,7 +122,7 @@ try:
                                 if inp2 == "/exit":
                                     saveChat(messages, chatName)
                                     break
-                                print("<Chatbot> " + send(inp2, messages,config["endpoint"], headers2))
+                                print("<Chatbot> " + send(inp2, messages,config["model"],config["endpoint"], headers2))
                         except KeyboardInterrupt:
                             print("ok exiting")
                             saveChat(messages, chatName)

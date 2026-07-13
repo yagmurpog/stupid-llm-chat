@@ -18,12 +18,12 @@ def getModelIds(models):
     return ids
 
 
-def send(text, chat,endpoint,headers):
+def send(text, chat,model, endpoint,headers):
     user_message = {"role": "user", "content": text}
     chat.append(user_message)
     try:
         payload = {
-            "model": "tencent/hy3:free",
+            "model": model,
             "messages": chat,
         }
 
