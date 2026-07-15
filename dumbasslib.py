@@ -1,23 +1,8 @@
-from openrouter import OpenRouter
 from sys import platform
 from pathlib import Path
 import json
+import os
 from myowndumbasswrapperforopenrouternbecauseitdoesntworkonwindowsforsomereason import *
-
-
-def getModelsOLD(client):
-    return client.models.list().data
-
-
-def sortModelsByPriceOLD(models):
-    return sorted(models, key=lambda x: float(x.pricing.completion))
-
-
-def getModelIdsOLD(models):
-    ids = []
-    for model in models:
-        ids.append(model.id)
-    return ids
 
 
 def updateConfig(configFile, config):
@@ -39,17 +24,6 @@ def select(modelid, availableModels, config, configFile):
         updateConfig(configFile, config)
     else:
         print("model not found !")
-
-
-def sendOLD(text, chat, client, config):
-    user_message = {"role": "user", "content": text}
-    chat.append(user_message)
-    try:
-        response = client.chat.send(model=config["model"], messages=chat)
-        chat.append(response.choices[0].message)
-        return response.choices[0].message.content
-    except BaseException as exc:
-        return exc
 
 
 def getChatsFolder():
@@ -81,6 +55,9 @@ def loadChat(chatName):
     if Path(getChatsFolder() + chatName + ".json").exists():
         with open(chatFile, "r", encoding="utf-8") as f:
             return json.loads(f.read())
+    else:
+        raise Exception("chat doesn't exist!")
+    
 
 
 def saveChat(chat, chatName):
@@ -90,6 +67,8 @@ def saveChat(chat, chatName):
         f.close()
 
 
-def createChatName():
-    return "dumdum"
-    
+def createChatName(chatsPath):
+    id = 0
+    while "chat_" + str(id) + ".json" in os.listdir(chatsPath):
+        id += 1
+    return "chat_" + str(id)

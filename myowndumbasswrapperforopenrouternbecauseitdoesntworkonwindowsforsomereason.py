@@ -37,7 +37,9 @@ def send(text, chat,model, endpoint,headers):
             jsonifiedResponse = json.loads(response.text)
             assistantMessage = jsonifiedResponse["choices"][0]["message"]
 
-        chat.append(assistantMessage)
-        return str(assistantMessage["content"])
+            chat.append(assistantMessage)
+            return str(assistantMessage["content"])
+        else:
+            return response.text
     except BaseException as exc:
         return exc

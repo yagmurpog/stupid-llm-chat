@@ -11,7 +11,7 @@ config = {
     "model": "",
     "system_prompt": "You are an AI chatbot, speak in a calm tone like someone if they're messaging on an online platform, keep your answers short like a human. Don't use emojis and speak like a terminally online personality would.",
     "chats_folder": getChatsFolder(),
-    "endpoint":"https://ai.hackclub.com/proxy/v1/"
+    "endpoint": "https://ai.hackclub.com/proxy/v1/",
 }
 
 
@@ -23,20 +23,11 @@ configFile = getConfigFile()
 
 if Path(configFile).exists():
     config = readConfig(configFile)
-
-    print(config["model"])
-
     if not Path(config["chats_folder"]).exists():
         os.makedirs(config["chats_folder"])
 
 else:
     updateConfig(configFile, config)
-
-
-client = OpenRouter(
-    api_key=config["key"],
-    server_url="https://ai.hackclub.com/proxy/v1",
-)
 
 messages = [
     {
@@ -46,6 +37,11 @@ messages = [
 ]
 
 availableModels = getModels(config["endpoint"])
+
+print("my dumbass llm (cli?) chatting program")
+
+if config["key"] == "":
+    print("set an api key with the key command to start chatting")
 
 try:
     while True:
@@ -57,7 +53,16 @@ try:
             inpSplit = inp.split()
             match inpSplit[0]:
                 case "help":
-                    print("list, select, chat")
+                    help = """
+                        help :      yeah
+                        list :      lists availaible models, add a parameter to search (anthropic, :free, openai) 
+                        select :    selects a model
+                        chat :      create or select a chat with a parameter
+                        key :       set your api key
+                        endpoint :  change the end point (don't forget to add a / at the end!)
+                        lc :        lists chats
+                    """
+                    print(help)
                 case "list":
                     if len(inpSplit) > 1:
                         search = True
@@ -83,9 +88,15 @@ try:
                     else:
                         print("pass along a paramater please")
 
-                case "api":
+                case "key":
                     if len(inpSplit) > 1:
                         config["key"] = inpSplit[1]
+                        updateConfig(configFile, config)
+                    else:
+                        print("pass along a paramater please")
+                case "endpoint":
+                    if len(inpSplit) > 1:
+                        config["endpoint"] = inpSplit[1]
                         updateConfig(configFile, config)
                     else:
                         print("pass along a paramater please")
@@ -99,12 +110,16 @@ try:
                         print("please select an model first")
 
                     if config["model"] != "" and config["key"] != "":
-                        chatName = createChatName()
+                        chatName = createChatName(config["chats_folder"])
                         print("chatting with " + config["model"])
+
                         if len(inpSplit) > 1:
                             chatName = inpSplit[1]
-                            messages = loadChat(inpSplit[1])
-                            print("loaded chat: " + inpSplit[1])
+                            try:
+                                messages = loadChat(inpSplit[1])
+                                print("loaded chat: " + inpSplit[1])
+                            except Exception:
+                                print("new chat created: " + chatName)
                         else:
                             print("new chat created: " + chatName)
 
@@ -112,22 +127,30 @@ try:
                         print("type /exit to exit chat mode")
                         try:
                             headers2 = {
-                                "Authorization": "Bearer "
-                                + config["key"],
+                                "Authorization": "Bearer " + config["key"],
                                 "Content-Type": "application/json",
                             }
-                            
+
                             while True:
                                 inp2 = format(input(inputText))
                                 if inp2 == "/exit":
                                     saveChat(messages, chatName)
                                     break
-                                print("<Chatbot> " + send(inp2, messages,config["model"],config["endpoint"], headers2))
+                                print(
+                                    "<Chatbot> "
+                                    + send(
+                                        inp2,
+                                        messages,
+                                        config["model"],
+                                        config["endpoint"],
+                                        headers2,
+                                    )
+                                )
                         except KeyboardInterrupt:
                             print("ok exiting")
                             saveChat(messages, chatName)
 
-                case "list-chats":
+                case "lc":
                     print(os.listdir(config["chats_folder"]))
 except KeyboardInterrupt:
-    pass
+    print("buh bye!!")
