@@ -1,22 +1,138 @@
 import os
 import json
+import requests
 from pathlib import Path
-from dumbasslib import *
 from sys import platform
-from myowndumbasswrapperforopenrouternbecauseitdoesntworkonwindowsforsomereason import *
 
 
-def listModels(availableModels,searchQuery=""):
+def getModels(endpoint):
+    try:
+        response = requests.get(endpoint + "models")
+        if response.status_code == 200:
+            return json.loads(response.text)["data"]
+    except BaseException as exc:
+        print(exc)
+
+
+def sortModelsByPrice(models):
+    return sorted(models, key=lambda x: float(x["pricing"]["completion"]))
+
+
+def getModelIds(models):
+    ids = []
+    for model in models:
+        ids.append(model["id"])
+    return ids
+
+
+def send(text, chat, model, endpoint, headers):
+    user_message = {"role": "user", "content": text}
+    chat.append(user_message)
+    try:
+        payload = {
+            "model": model,
+            "messages": chat,
+        }
+
+        response = requests.post(
+            url=endpoint + "chat/completions",
+            headers=headers,
+            data=json.dumps(payload),
+        )
+        match response.status_code:
+            case 200:
+                jsonifiedResponse = json.loads(response.text)
+                assistantMessage = jsonifiedResponse["choices"][0]["message"]
+
+                chat.append(assistantMessage)
+                return str(assistantMessage["content"])
+            case 401:
+                print("authentication failed, is api key valid?")
+            case 404:
+                print("not found, is endpoint valid? (and make sure it ends with a /)")
+            case _:
+                return response.text
+    except BaseException as exc:
+        return exc
+
+
+def updateConfig(configFile, config):
+    with open(configFile, "w", encoding="utf-8") as f:
+        f.write(json.dumps(config))
+        f.close()
+
+
+def readConfig(configFile):
+    with open(configFile, "r", encoding="utf-8") as f:
+        return json.loads(f.read())
+        f.close()
+
+
+def select(modelid, availableModels, config, configFile):
+    if modelid in getModelIds(availableModels):
+        config["model"] = modelid
+        print("model selected: " + modelid)
+        updateConfig(configFile, config)
+    else:
+        print("model not found !")
+
+
+def getChatsFolder():
+    match platform:
+        case "linux" | "darwin":
+            return str(Path.home()) + "/.local/share/dumbassllmchattingprogram/chats/"
+
+        case "win32":
+            return (
+                str(Path.home())
+                + "\\AppData\\Roaming\\dumbassllmchattingprogram\\chats\\"
+            )
+
+
+def getConfigFile():
+    match platform:
+        case "linux" | "darwin":
+            return str(Path.home()) + "/.config/dumbassllmchattingprogramconfig.json"
+
+        case "win32":
+            return (
+                str(Path.home())
+                + "\\AppData\\Roaming\\dumbassllmchattingprogram\\dumbassllmchattingprogramconfig.json"
+            )
+
+
+def loadChat(chatName):
+    chatFile = getChatsFolder() + chatName + ".json"
+    if Path(getChatsFolder() + chatName + ".json").exists():
+        with open(chatFile, "r", encoding="utf-8") as f:
+            return json.loads(f.read())
+    else:
+        raise Exception("chat doesn't exist!")
+
+
+def saveChat(chat, chatName):
+    chatFile = getChatsFolder() + chatName + ".json"
+    print("saved chat as " + chatFile)
+    with open(chatFile, "w", encoding="utf-8") as f:
+        f.write(json.dumps(chat))
+        f.close()
+
+
+def createChatName(chatsPath):
+    id = 0
+    while "chat_" + str(id) + ".json" in os.listdir(chatsPath):
+        id += 1
+    return "chat_" + str(id)
+
+
+def listModels(availableModels, searchQuery=""):
     for model in sortModelsByPrice(availableModels):
         if searchQuery in model["id"]:
             print(
                 model["id"]
                 + "  O $"
-                + str(
-                    round(float(model["pricing"]["completion"]) * 1000000,2)
-                )
+                + str(round(float(model["pricing"]["completion"]) * 1000000, 2))
             )
-
 
 
 def setEndpoint(config, endpoint):
@@ -29,7 +145,7 @@ def setEndpoint(config, endpoint):
     updateConfig(configFile, config)
 
 
-def chat(config,messages,parameter=""):
+def chat(config, messages, parameter=""):
     chatName = createChatName(config["chats_folder"])
     print("chatting with " + config["model"])
 
@@ -43,7 +159,6 @@ def chat(config,messages,parameter=""):
     else:
         print("new chat created: " + chatName)
 
-    
     print("type /exit to exit chat mode")
     try:
         headers2 = {
@@ -71,8 +186,7 @@ def chat(config,messages,parameter=""):
         saveChat(messages, chatName)
 
 
-
-if __name__ == '__main__':
+def main():
     # default config
     config = {
         "key": "",
@@ -82,22 +196,19 @@ if __name__ == '__main__':
         "endpoint": "https://ai.hackclub.com/proxy/v1/",
     }
 
-
     # have this ready as a fallback
     configFile = "./config.json"
 
     configFile = getConfigFile()
 
-
     # check if config and chats folder exists
     # if not create them
+    if not Path(config["chats_folder"]).exists():
+        os.makedirs(config["chats_folder"])
     if Path(configFile).exists():
         config = readConfig(configFile)
-        if not Path(config["chats_folder"]).exists():
-            os.makedirs(config["chats_folder"])
     else:
         updateConfig(configFile, config)
-
 
     messages = [
         {
@@ -106,22 +217,19 @@ if __name__ == '__main__':
         }
     ]
 
-
     availableModels = getModels(config["endpoint"])
-
 
     print("my dumbass llm (cli?) chatting program")
 
     if config["key"] == "":
         print("set an api key with the key command to start chatting")
 
-
     try:
         while True:
             inputText = "<Command> "
 
             inp = format(input(inputText))
-            
+
             if inp:
                 search = False
                 inpSplit = inp.split()
@@ -139,8 +247,8 @@ if __name__ == '__main__':
                         """
                         print(help)
                     case "list":
-                        if len (inpSplit) > 1:
-                            listModels(availableModels,inpSplit[1])
+                        if len(inpSplit) > 1:
+                            listModels(availableModels, inpSplit[1])
                         else:
                             listModels(availableModels)
                     case "select":
@@ -156,24 +264,24 @@ if __name__ == '__main__':
                             print("pass along a paramater please")
                     case "endpoint":
                         if hasArgument:
-                            setEndpoint(config,inpSplit[1])
-                            print("endpoint set : "+ config["endpoint"]) 
+                            setEndpoint(config, inpSplit[1])
+                            print("endpoint set : " + config["endpoint"])
                         else:
                             print("pass along a paramater please")
 
                     case "chat":
 
                         if config["key"] == "":
-                            print("please set an api key first with the api command")
+                            print("please set an api key first with the key command")
 
                         if config["model"] == "":
                             print("please select an model first")
 
                         if config["model"] != "" and config["key"] != "":
                             if hasArgument:
-                                chat(config,messages,inpSplit[1])
+                                chat(config, messages, inpSplit[1])
                             else:
-                                chat(config,messages)
+                                chat(config, messages)
                     case "lc":
                         print(os.listdir(config["chats_folder"]))
                     case _:
@@ -183,3 +291,5 @@ if __name__ == '__main__':
         print("buh bye!!")
 
 
+if __name__ == "__main__":
+    main()

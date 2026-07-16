@@ -1,0 +1,28 @@
+[project]
+name = "dumbassllmchattingprogram"
+version = "1.0.0"
+description = "program to chat with models on openrouter"
+readme = "README.md"
+classifiers = [
+  "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+  "Operating System :: Microsoft :: Windows :: Windows 10",
+  "Operating System :: POSIX :: Linux"
+]
+license-files = ["LICENSE"]
+dependencies =["requests"]
+
+[project.scripts]
+dumbassllmchattingprogram = "dumbassllmchattingprogram.app:main"
+
+[project.urls]
+Homepage = "https://github.com/yagmurpog/stupid-llm-chat"
+Issues = "https://github.com/yagmurpog/stupid-llm-chat/issues"
+
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+
+[tool.setuptools.packages.find]
+where = ["src"] 
+include = ["dumbassllmchattingprogram*"]
