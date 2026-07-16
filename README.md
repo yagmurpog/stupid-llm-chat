@@ -7,7 +7,7 @@ by default endpoint is set to ai.hackclub.com
 
 ## Running
 - install the package:
-`pip install insertpackagenamehere` or `pipx install insertpackagenaemhere`
+`pip install dumbassllmchattingprogram` or `pipx install dumbassllmchattingprogram`
 - run the package
 - set your api key
 `key yourkeyhere`
