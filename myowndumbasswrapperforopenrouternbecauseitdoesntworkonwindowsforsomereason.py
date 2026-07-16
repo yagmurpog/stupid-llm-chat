@@ -2,10 +2,12 @@ import requests
 import json
 
 def getModels(endpoint):
-    response = requests.get(endpoint + "models")
-    if response.status_code == 200:
-        return json.loads(response.text)["data"]
-
+    try:
+        response = requests.get(endpoint + "models")
+        if response.status_code == 200:
+            return json.loads(response.text)["data"]
+    except BaseException as exc:
+        print(exc)
 
 def sortModelsByPrice(models):
     return sorted(models, key=lambda x: float(x["pricing"]["completion"]))
@@ -32,14 +34,18 @@ def send(text, chat,model, endpoint,headers):
             headers=headers,
             data=json.dumps(payload),
         )
+        match response.status_code:
+            case 200:
+                jsonifiedResponse = json.loads(response.text)
+                assistantMessage = jsonifiedResponse["choices"][0]["message"]
 
-        if response.status_code == 200:
-            jsonifiedResponse = json.loads(response.text)
-            assistantMessage = jsonifiedResponse["choices"][0]["message"]
-
-            chat.append(assistantMessage)
-            return str(assistantMessage["content"])
-        else:
-            return response.text
+                chat.append(assistantMessage)
+                return str(assistantMessage["content"])
+            case 401:
+                print("authentication failed, is api key valid?")
+            case 404:
+                print("not found, is endpoint valid? (and make sure it ends with a /)")
+            case _:
+                return response.text
     except BaseException as exc:
         return exc
